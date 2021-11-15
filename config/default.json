@@ -10,10 +10,7 @@
     "entity": "user",
     "service": "users",
     "secret": "Yoga0GObuhdNNx/zLItwTSK79Eo=",
-    "authStrategies": [
-      "jwt",
-      "local"
-    ],
+    "authStrategies": ["jwt", "local"],
     "jwtOptions": {
       "header": {
         "typ": "access"
@@ -26,6 +23,13 @@
     "local": {
       "usernameField": "email",
       "passwordField": "password"
+    },
+    "oauth": {
+      "redirect": "/",
+      "github": {
+        "key": "1b9d362b93fe0db3ad70",
+        "secret": "0c1a16addb4d8bca50721550c4b8f1645958462e"
+      }
     }
   },
   "nedb": "../data"
