@@ -14,7 +14,7 @@ client.configure(feathers.authentication());
 const loginHTML = `<main class="login container">
   <div class="row">
     <div class="col-12 col-6-tablet push-3-tablet text-center heading">
-      <h1 class="font-100">Log in or signup</h1>
+      <h1 class="font-100">帳密隨便打，按第二個即可進入</h1>
     </div>
   </div>
   <div class="row">
