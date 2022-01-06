@@ -48,7 +48,7 @@ const loginHTML = `<main class="login container">
 const chatHTML = `<main class="flex flex-column">
   <header class="title-bar flex flex-row flex-center">
     <div class="title-wrapper block center-element">
-      <img class="logo" src="http://feathersjs.com/img/feathers-logo-wide.png"
+      <img class="logo" src="./未命名繪圖.png"
         alt="Feathers Logo">
       <span class="title">Chat</span>
     </div>
