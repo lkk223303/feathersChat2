@@ -50,11 +50,11 @@ app.configure(socketio({
     });
     
     // Registering Socket.io middleware
-    io.use(function (socket, next) {
-      // Exposing a request property to services and hooks
-      socket.feathers.referrer = socket.request.referrer;
-      next();
-    });
+    // io.use(function (socket, next) {
+    //   // Exposing a request property to services and hooks
+    //   socket.feathers.referrer = socket.request.referrer;
+    //   next();
+    // });
   }
 ));
 
