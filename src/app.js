@@ -37,7 +37,26 @@ app.use("/", express.static(app.get("public")));
 
 // Set up Plugins and providers
 app.configure(express.rest());
-app.configure(socketio());
+// app.configure(socketio());
+app.configure(socketio({
+    maxHttpBufferSize: 1e8, // 100 MB
+  }, 
+  function(io) {
+    io.on('connection', function(socket) {
+      socket.on('upload', function (data) {
+        socket.broadcast.emit('receive', data); //- 給其他人
+        socket.emit('receive', data);
+      });
+    });
+    
+    // Registering Socket.io middleware
+    io.use(function (socket, next) {
+      // Exposing a request property to services and hooks
+      socket.feathers.referrer = socket.request.referrer;
+      next();
+    });
+  }
+));
 
 // Configure other middleware (see `middleware/index.js`)
 app.configure(middleware);

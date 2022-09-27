@@ -1,5 +1,6 @@
 /* global io, feathers, moment */
 // Establish a Socket.io connection
+let G_USER = null;
 const socket = io();
 // Initialize our Feathers client application through Socket.io
 // with hooks and authentication.
@@ -74,7 +75,10 @@ const chatHTML = `<main class="flex flex-column">
 
     <div class="flex flex-column col col-9">
       <main class="chat flex flex-column flex-1 clear"></main>
-
+      <p style="margin:0 15px 0 0;text-align:right;background:#f8f8f8">
+        <input id="uploader" type="file" onchange="upload(this.files, this)" />
+        <button class="button-primary" onClick="sendUpload()">上傳</button>
+      </p>
       <form class="flex flex-row flex-space-between" id="send-message">
         <input type="text" name="text" class="flex flex-1">
         <button class="button-primary" type="submit">Send</button>
@@ -112,11 +116,14 @@ const addUser = (user) => {
 // Renders a message to the page
 const addMessage = (message) => {
   // The user that sent this message (added by the populate-user hook)
-  const { user = {} } = message;
-  const chat = document.querySelector(".chat");
-  // Escape HTML to prevent XSS attacks
-  const text = escape(message.text);
+  const { user = {} } = message;  
+  AddChatItem(user, message);
+};
 
+function AddChatItem(user, message=null){
+  // Escape HTML to prevent XSS attacks
+  const text = message ? escape(message.text) : "";
+  const chat = document.querySelector(".chat");
   if (chat) {
     chat.innerHTML += `<div class="message flex flex-row">
       <img src="${user.avatar}" alt="${user.name || user.email}" class="avatar">
@@ -125,19 +132,26 @@ const addMessage = (message) => {
           <span class="username font-600">${escape(
             user.name || user.email
           )}</span>
-          <span class="sent-date font-300">${moment(message.createdAt).format(
-            "MMM Do, hh:mm:ss"
-          )}</span>
+          <span class="sent-date font-300">${
+            message == null ?
+            moment().format("MMM Do, hh:mm:ss")
+            :
+            moment(message.createdAt).format("MMM Do, hh:mm:ss")
+          }</span>
         </p>
-        <p class="message-content font-300">${text}</p>
+        ${
+          message == null?
+          ""
+          :
+          `<p class="message-content font-300">${text}</p>`
+        }        
       </div>
     </div>`;
 
     // Always scroll to the bottom of our message list
     chat.scrollTop = chat.scrollHeight - chat.clientHeight;
   }
-};
-
+}
 /////// Displaying pages//
 // Show the login page
 const showLogin = (error) => {
@@ -191,15 +205,15 @@ const login = async (credentials) => {
   try {
     if (!credentials) {
       // Try to authenticate using an existing token
-      await client.reAuthenticate();
+      G_USER = await client.reAuthenticate();
+      console.log(theUser);
     } else {
       // Otherwise log in with the `local` strategy using the credentials we got
-      await client.authenticate({
+      G_USER = await client.authenticate({
         strategy: "local",
         ...credentials,
       });
     }
-
     // If successful, show the chat page
     showChat();
   } catch (error) {
@@ -238,7 +252,7 @@ addEventListener("#login", "click", async () => {
 // "Logout" button click handler
 addEventListener("#logout", "click", async () => {
   await client.logout();
-
+  G_USER=null;
   document.getElementById("app").innerHTML = loginHTML;
 });
 
@@ -252,16 +266,75 @@ addEventListener("#send-message", "submit", async (ev) => {
   // Create a new message and then clear the input field
   await client.service("messages").create({
     text: input.value,
-  });
+  });  
 
   input.value = "";
 });
 
 // Listen to created events and add the new message in real-time
-client.service("messages").on("created", addMessage);
-
+// client.service("messages").on("created", addMessage);
+socket.on('messages created', addMessage);
 // We will also see when new users get created in real-time
 client.service("users").on("created", addUser);
+
+async function upload(files, tEle) {
+  // console.log(files[0].size);
+  if(files[0].size > 62960191){
+    alert("檔案太大, 不可大於60mb!");
+    tEle.value = "";
+  };
+}
+function sendUpload(){ //- 送出socket 上傳
+  const fileEle = document.getElementById("uploader");
+  const files = fileEle.files;
+  if(files.length == 0){
+    alert("請先選擇檔案再上傳!");
+    return;
+  } else if(!files[0].type.includes('image')&&!files[0].type.includes('video')){
+    alert("檔案格式錯誤!(允許影片,圖片)");
+    fileEle.value = "";
+    return;
+  }
+  socket.emit("upload",{ f:files[0], t: files[0].type, u:G_USER.user });
+  fileEle.value = "";
+}
+socket.on('receive',function(data){
+  if(!data || !data.hasOwnProperty('t'))return;
+  const typeTwo = data.t.includes('video') ? 'video' : 'image';
+  switch (typeTwo) {
+    case 'image':
+      appendImage(data.f, data.t, data.u);
+      break;
+    case 'video':
+      appendVideo(data.f, data.t, data.u);
+      break;
+    default:
+      break;
+  }
+});
+function appendImage(buf, tType, user){
+  AddChatItem(user, null);
+  const boxEle = document.querySelector('.message:last-child .message-wrapper');
+  const tImage = new Image();
+  tImage.src = URL.createObjectURL(new Blob([new Uint8Array(buf)], {type: tType}));
+  tImage.width = 500;
+  boxEle.appendChild(tImage);
+}
+
+function appendVideo(buf, tType, user){
+  AddChatItem(user, null);
+  const boxEle = document.querySelector('.message:last-child .message-wrapper');
+  const video = document.createElement('video');
+  video.src =
+    URL.createObjectURL(new Blob([new Uint8Array(buf)], {type: tType}));
+
+  video.autoplay = false;
+  video.controls = true;
+  video.muted = false;
+  video.height = 360; // 👈️ in px
+  video.width = 480; // 👈️ in px
+  boxEle.appendChild(video);
+}
 
 // Call login right away so we can show the chat window
 // If the user can already be authenticated
